@@ -25,8 +25,17 @@ class Generator():
             PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
             PREFIX owl: <http://www.w3.org/2002/07/owl#>
             SELECT ?entity ?label ?definition WHERE {
-                ?entity rdfs:subClassOf* brick:Class .
-                FILTER(?entity != brick:Class)
+                {
+                    ?entity rdfs:subClassOf* brick:Equipment .
+                } UNION {
+                    ?entity rdfs:subClassOf* brick:Location .
+                } UNION {
+                    ?entity rdfs:subClassOf* brick:Collection .
+                } UNION {
+                    ?entity rdfs:subClassOf* brick:Alarm .
+                } UNION {
+                    ?entity rdfs:subClassOf* brick:Sensor .
+                }
                 FILTER NOT EXISTS {
                     ?entity owl:deprecated true .
                 } 
@@ -40,9 +49,8 @@ class Generator():
         )
 
         # create references dictionary with root initiated
-        references = {"https://brickschema.org/schema/Brick#Class": classification}
+        references = {}
 
-        counter = 0
         for row in query:
             # location is the entity URI
             location = row.get("entity")
@@ -55,13 +63,13 @@ class Generator():
             # name is the entity's label if it exists, else the name in the URI
             name = row.get("label")
             if not name:
-              name = location.split("#")[-1]
+                name = location.split("#")[-1].replace("_", " ")
 
             # create the reference
             ref = self.file.create_entity('IfcClassificationReference', **{
                                         'Location': location,
                                         'Description': description,
-                                        'Identification': str(counter),
+                                        'Identification': name,
                                         'Name': name
                                     })
             
@@ -72,7 +80,6 @@ class Generator():
                 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                 SELECT ?parent WHERE {
                     brick:{entity} rdfs:subClassOf ?parent .
-                    FILTER (?parent != brick:Entity)
                 }
                 """.replace(
                     "{entity}", location.split("#")[-1]
@@ -85,18 +92,18 @@ class Generator():
                     # some parents are not a brick type, so those should be ignored
                     # some entities have multiple parents that are a brick type
                     # since the query traverses down the graph, we can assume at least one parent has been seen, so pick that one
+                    # if no parent is found, then it must mean it is the top level of what was queried
                     break
-                else:
-                    parent = None
-            if not parent:
-                print("ERROR: no valid parent found")
+                parent = None
 
-            # assign reference source
-            ref.ReferencedSource = references[parent]
+            # assign reference source        
+            if parent:
+                ref.ReferencedSource = references[parent]
+            else:
+                ref.ReferencedSource = classification
 
             # save this reference for future reference sources
             references[location.toPython()] = ref
-            counter += 1
 
         self.file.write('BRICK.ifc')
 
