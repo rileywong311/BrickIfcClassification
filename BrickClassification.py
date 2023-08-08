@@ -48,7 +48,7 @@ class Generator():
             """
         )
 
-        # create references dictionary with root initiated
+        # create references dictionary
         references = {}
 
         for row in query:
