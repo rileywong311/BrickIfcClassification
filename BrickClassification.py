@@ -1,54 +1,104 @@
-import csv
-import os
-import json
 import ifcopenshell
 from brickschema.graph import Graph
-from pathlib import Path
 
 class Generator():
     def __init__(self):
         self.file = ifcopenshell.file(schema='IFC4')
-        self.out_dir = './'
+        self.schema = Graph()
+        self.schema.load_file("Brick.ttl") # stable 1.3
 
     def generate(self):
         classification = self.file.create_entity('IfcClassification', **{
             'Source': 'BRICK',
-            'Edition': 'August-6',
-            'EditionDate': '2023-08-06',
+            'Edition': 'August-7',
+            'EditionDate': '2023-08-07',
             'Name': 'BRICK',
             'Description': '',
             'Location': 'https://brickschema.org/schema/Brick',
             'ReferenceTokens': []
         })
-        # # We assume all the Excel spreadsheets are re-exported in CSV format
-        # for filename in Path('./').glob('*.csv'):
-        #     with open(filename, newline='') as csvfile:
-        #         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-        #         name = None
-        #         levels = [None, None, None, None]
-        #         ref = classification
-        #         for i, row in enumerate(reader):
-        #             if i <= 4:
-        #                 continue
-        #             if row[0]:
-        #                 name = row[0]
-        #             elif row[1]:
-        #                 name = row[1]
-        #             elif row[2]:
-        #                 name = row[2]
-        #             elif row[3]:
-        #                 name = row[3]
-        #             ref = self.file.create_entity('IfcClassificationReference', **{
-        #                 'Identification': row[4],
-        #                 'Name': name
-        #             })
-        #             cur_level = len(row[4].split('-')) - 1
-        #             levels[cur_level] = ref
-        #             if cur_level == 0:
-        #                 ref.ReferencedSource = classification
-        #             else:
-        #                 ref.ReferencedSource = levels[cur_level-1]
-        # self.file.write('VBIS.ifc')
+        
+        query = self.schema.query(
+            """
+            PREFIX brick: <https://brickschema.org/schema/Brick#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+            PREFIX owl: <http://www.w3.org/2002/07/owl#>
+            SELECT ?entity ?label ?definition WHERE {
+                ?entity rdfs:subClassOf* brick:Class .
+                FILTER(?entity != brick:Class)
+                FILTER NOT EXISTS {
+                    ?entity owl:deprecated true .
+                } 
+                OPTIONAL {
+                    ?entity rdfs:label ?label .
+                    ?entity skos:definition ?definition .
+                }
+            }
+            GROUP BY ?entity
+            """
+        )
+
+        # create references dictionary with root initiated
+        references = {"https://brickschema.org/schema/Brick#Class": classification}
+
+        counter = 0
+        for row in query:
+            # location is the entity URI
+            location = row.get("entity")
+            
+            # description is the entity's definition
+            description = row.get("definition")
+            if not description:
+                description = ''
+
+            # name is the entity's label if it exists, else the name in the URI
+            name = row.get("label")
+            if not name:
+              name = location.split("#")[-1]
+
+            # create the reference
+            ref = self.file.create_entity('IfcClassificationReference', **{
+                                        'Location': location,
+                                        'Description': description,
+                                        'Identification': str(counter),
+                                        'Name': name
+                                    })
+            
+            # get all parents of the entity
+            query = self.schema.query(
+                """
+                PREFIX brick: <https://brickschema.org/schema/Brick#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                SELECT ?parent WHERE {
+                    brick:{entity} rdfs:subClassOf ?parent .
+                    FILTER (?parent != brick:Entity)
+                }
+                """.replace(
+                    "{entity}", location.split("#")[-1]
+                )
+            )
+            # filter parents for the brick entity
+            for row in query:
+                parent = row.get("parent").toPython()
+                if "brickschema.org" in parent and parent in references.keys(): 
+                    # some parents are not a brick type, so those should be ignored
+                    # some entities have multiple parents that are a brick type
+                    # since the query traverses down the graph, we can assume at least one parent has been seen, so pick that one
+                    break
+                else:
+                    parent = None
+            if not parent:
+                print("ERROR: no valid parent found")
+
+            # assign reference source
+            ref.ReferencedSource = references[parent]
+
+            # save this reference for future reference sources
+            references[location.toPython()] = ref
+            counter += 1
+
+        self.file.write('BRICK.ifc')
 
 generator = Generator()
 generator.generate()
