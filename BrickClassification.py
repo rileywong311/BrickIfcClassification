@@ -5,14 +5,14 @@ class Generator():
     def __init__(self):
         self.file = ifcopenshell.file(schema='IFC4')
         self.schema = Graph()
-        self.schema.load_file("Brick.ttl") # stable 1.3
+        self.schema.load_file("Brick.ttl") # stable 1.3 loaded from external file
 
     def generate(self):
         classification = self.file.create_entity('IfcClassification', **{
-            'Source': 'BRICK',
-            'Edition': 'August-7',
-            'EditionDate': '2023-08-07',
-            'Name': 'BRICK',
+            'Source': 'Brick',
+            'Edition': 'August-11',
+            'EditionDate': '2023-08-11',
+            'Name': 'Brick',
             'Description': '',
             'Location': 'https://brickschema.org/schema/Brick',
             'ReferenceTokens': []
@@ -105,7 +105,7 @@ class Generator():
             # save this reference for future reference sources
             references[location.toPython()] = ref
 
-        self.file.write('BRICK.ifc')
+        self.file.write('Brick.ifc')
 
 generator = Generator()
 generator.generate()

@@ -1,11 +1,11 @@
 ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');
-FILE_NAME('','2023-08-07T22:34:41',(),(),'IfcOpenShell v0.7.0-fc50bdd3a','IfcOpenShell v0.7.0-fc50bdd3a','');
+FILE_NAME('','2023-08-11T12:28:44',(),(),'IfcOpenShell v0.7.0-fc50bdd3a','IfcOpenShell v0.7.0-fc50bdd3a','');
 FILE_SCHEMA(('IFC4'));
 ENDSEC;
 DATA;
-#1=IFCCLASSIFICATION('BRICK','August-7','2023-08-07','BRICK','','https://brickschema.org/schema/Brick',());
+#1=IFCCLASSIFICATION('Brick','August-11','2023-08-11','Brick','','https://brickschema.org/schema/Brick',());
 #2=IFCCLASSIFICATIONREFERENCE('https://brickschema.org/schema/Brick#Equipment','Equipment','Equipment',#1,'devices that serve all or part of the building and may include electric power, lighting, transportation, or service water heating, including, but not limited to, furnaces, boilers, air conditioners, heat pumps, chillers, water heaters, lamps, luminaires, ballasts, elevators, escalators, or other devices or installations.',$);
 #3=IFCCLASSIFICATIONREFERENCE('https://brickschema.org/schema/Brick#Elevator','Elevator','Elevator',#2,'A device that provides vertical transportation between floors, levels or decks of a building, vessel or other structure',$);
 #4=IFCCLASSIFICATIONREFERENCE('https://brickschema.org/schema/Brick#Gas_Distribution','Gas Distribution','Gas Distribution',#2,'Utilize a gas distribution source to represent how gas is distributed across multiple destinations',$);
